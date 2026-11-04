@@ -877,7 +877,7 @@ function kill(e){
   if(e.mini){if(S.cid==='yuji')S.formPending=true;banner('祓除',e.name+' exorcizado','#fff');S.shake=12;S.items.push({x:e.x,y:e.y,type:'onigiri'});for(let i=0;i<6;i++)S.gems.push({x:e.x+rand(-30,30),y:e.y+rand(-30,30),v:15,mag:false,sp:0});addUlt(ultNeed()*.2)}
   if(e.type==='splitter')for(let i=0;i<2;i++)spawnFoe('mini',e.x+(i?14:-14),e.y);
   if(S.zone==='city'){const big=e.type==='tank'||e.type==='brute';const ch=e.type==='fly'||e.type==='mini'?.005:big?.03:.014;
-    if(e.type!=='fly'&&Math.random()<.008)S.items.push({x:e.x,y:e.y,type:'onigiri'})}
+    {const low=S.P.hp/stat('maxhp')<.4,ch=(e.type==='fly'||e.type==='mini'?.012:.035)*(low?2:1);if(Math.random()<ch&&S.items.filter(i=>i.type==='onigiri').length<10)S.items.push({x:e.x,y:e.y,type:'onigiri'})}}
   if(S.gems.length>350){const g=S.gems[(Math.random()*S.gems.length)|0];g.v+=e.xp}else S.gems.push({x:e.x+rand(-4,4),y:e.y+rand(-4,4),v:e.xp,mag:false,sp:0});
 }
 function damagePlayer(d){
