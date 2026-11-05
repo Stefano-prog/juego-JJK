@@ -538,6 +538,14 @@ function sprite(rows,pal){
   rows.forEach((r,j)=>{for(let i=0;i<r.length;i++){const ch=r[i];if(ch==='.')continue;const col=pal[ch]||PAL0[ch];if(!col)continue;x.fillStyle=col;x.fillRect(i,j,1,1);fx.fillRect(i,j,1,1)}});
   return{c,f,w,h};
 }
+function light3D(sp){const x=sp.c.getContext('2d'),w=sp.w,h=sp.h,d=x.getImageData(0,0,w,h),a=d.data,o=new Uint8ClampedArray(a);
+  const op=(i,j)=>i>=0&&j>=0&&i<w&&j<h&&a[(j*w+i)*4+3]>0,dark=(i,j)=>{const q=(j*w+i)*4;return a[q]+a[q+1]+a[q+2]<90};
+  for(let j=0;j<h;j++)for(let i=0;i<w;i++){if(!op(i,j)||dark(i,j))continue;const q=(j*w+i)*4;
+    let nx=0,ny=0;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){if(!op(i+dx,j+dy)||dark(i+dx,j+dy)){nx+=dx;ny+=dy}}
+    const len=Math.hypot(nx,ny)||1,lit=len>.5?(-nx*-.6+-ny*-.8)/len*-1:0;let f=1+(.16*lit)-.1*(j/h);
+    if(!op(i+1,j+1)||dark(i+1,j+1))f-=.08;if(!op(i-1,j-1)||dark(i-1,j-1))f+=.1;
+    o[q]=Math.max(0,Math.min(255,a[q]*f));o[q+1]=Math.max(0,Math.min(255,a[q+1]*f));o[q+2]=Math.max(0,Math.min(255,a[q+2]*f))}
+  d.data.set(o);x.putImageData(d,0,0);return sp}
 function shadeSprite(sp){const x=sp.c.getContext('2d'),w=sp.w,h=sp.h,d=x.getImageData(0,0,w,h),a=d.data,o=new Uint8ClampedArray(a);
   const fill=(i,j)=>{if(i<0||j<0||i>=w||j>=h)return false;const p=(j*w+i)*4;return a[p+3]>0&&a[p]+a[p+1]+a[p+2]>110};
   for(let j=0;j<h;j++)for(let i=0;i<w;i++){if(!fill(i,j))continue;const p=(j*w+i)*4;let f=1;
@@ -607,7 +615,9 @@ function buildSprites(){
   SPR.chars.gojo={};for(const leg of [0,1,2])for(const bl of [0,1]){let r=GOJO.slice();if(GOJO_LEGS[leg])for(const k in GOJO_LEGS[leg])r[k]=GOJO_LEGS[leg][k];if(bl){r[13]=r[13].replace(/E/g,'s');r[14]=r[14].replace(/[wE]/g,'k');r[15]=r[15].replace(/e/g,'s')}const g=r.map(x=>x.split(''));for(let y=21;y<=23;y++){g[y][3]='.';g[y][4]='.';g[y][14]='.';g[y][15]='.'}SPR.chars.gojo[(bl?'b':'')+'n'+leg]=sprite(g.map(x=>x.join('')),GOJO_PAL)}
   for(const cast of [0,1])for(const leg of [0,1,2]){SPR.chars.gojo[''+cast+leg]=sprite(gojoRows(cast,leg,0),GOJO_PAL);SPR.chars.gojo['b'+cast+leg]=sprite(gojoRows(cast,leg,1),GOJO_PAL)}
   for(const id in ART){SPR.chars[id]={};const fr=artFrames(ART[id]);for(const k in fr)SPR.chars[id][k]=sprite(fr[k],ART[id].pal)}
+  for(const id in SPR.chars)for(const k in SPR.chars[id])if(!SPR.chars[id][k].lit){light3D(SPR.chars[id][k]);SPR.chars[id][k].lit=1}
   for(const l of [0,1,2]){const r=artFrames(ART.yuji)['0'+l].slice();for(const k in YUJI_PUNCH)r[k]=YUJI_PUNCH[k];SPR.chars.yuji['p'+l]=sprite(r,ART.yuji.pal);const r2=artFrames(ART.sukuna)['0'+l].slice();for(const k in YUJI_PUNCH)r2[k]=YUJI_PUNCH[k];SPR.chars.sukuna['p'+l]=sprite(r2,ART.sukuna.pal)}
+  for(const id of ['yuji','sukuna'])for(const l of [0,1,2]){const q=SPR.chars[id]['p'+l];if(q&&!q.lit){light3D(q);q.lit=1}}
   const TODO=["......kkkk......","......kHHk......",".....kkHHkk.....","....kHHHHHHk....","...kHHHHHHHHk...","...kHSSSSSSHk...","...kSkkSSkkSk...","...kSeSSSSeSk...","...kSSSxSSSSk...","...kSSmmmmSSk...","....kkSSSSkk....","..kkkSSSSSSkkk..",".kSSkwwwwwwkSSk.","kSSSkwwwwwwkSSSk","kSSkwwwwwwwwkSSk","kSSkwwwwwwwwkSSk",".kkkwwwwwwwwkkk.","...kwwwwwwwwk...","...kUUUUUUUUk...","...kUUUkkUUUk...","...kUUUk.kUUUk..","...kkkkk.kkkkk.."];
   const TODOC=TODO.slice();TODOC[12]=".kSSkwwwwwwkSSk.";TODOC[13]=".kSSSkwwwwkSSSk.";TODOC[14]="..kkSSSkkSSSkk..";TODOC[15]="...kwkSSSSkwk...";
   const tp={H:'#1c1a22',S:'#c98a5a',e:'#1a1012',x:'#8a4a3a',m:'#6a2a2a',w:'#f0f0f0',U:'#2a2a3a'};
@@ -1433,10 +1443,13 @@ function drawFoe(e){
   if(e.boss){ctx.font='16px '+FD;ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle='#fff';ctx.strokeStyle='#000';ctx.lineWidth=4;ctx.strokeText(e.jp,x,y-hgt/2-6);ctx.fillText(e.jp,x,y-hgt/2-6)}
 }
 const CSC=2.3;let trail=[],trailT=0,lastSp=null,lastFlip=false,lastSc=2;
+const DIR_SHEETS={};// id -> {img,cols,fw,fh}: 8 rows (S,SE,E,NE,N,NW,W,SW) x cols walk frames
+function loadDirSheet(id,src,cols){const im=new Image();im.onload=()=>{const fw=im.width/cols,fh=im.height/8;const fr=[];for(let r=0;r<8;r++){fr.push([]);for(let c=0;c<cols;c++){const cv2=document.createElement('canvas');cv2.width=fw;cv2.height=fh;cv2.getContext('2d').drawImage(im,c*fw,r*fh,fw,fh,0,0,fw,fh);const sp={c:cv2,w:fw,h:fh};const f=document.createElement('canvas');f.width=fw;f.height=fh;const fx=f.getContext('2d');fx.drawImage(cv2,0,0);fx.globalCompositeOperation='source-in';fx.fillStyle='#fff';fx.fillRect(0,0,fw,fh);sp.f=f;fr[r].push(sp)}}DIR_SHEETS[id]={fr,cols}};im.src=src}
+const dir8=a=>((Math.round(a/(Math.PI/4))%8)+8)%8;// 0=E,1=SE,2=S...
 function drawPlayer(){
   const P=S.P,id=pform(),cast=P.cast>0?1:0,leg=P.mv?[0,1,0,2][Math.floor(S.time*9)%4]:0;
   const w0=S.slots[S.active];if(w0&&w0.id==='infinity'){const r=55+9*w0.lvl;ctx.fillStyle='rgba(127,216,255,.12)';circle(P.x,P.y,r);ctx.fill();ctx.strokeStyle='rgba(127,216,255,.65)';ctx.setLineDash([6,8]);ctx.lineDashOffset=-S.time*30;ctx.lineWidth=2;ctx.stroke();ctx.setLineDash([])}
-  const punching=(id==='yuji'||id==='sukuna')&&P.punch>0,blink=id==='gojo'&&!cast&&(S.time%3.6)<.14,useArms=!!(ARMS[id]&&!punching&&(id==='yuta'||(!cast&&!(P.ham>0)))&&SPR.chars[id]['n'+leg]),sp=SPR.chars[id][punching?'p'+leg:useArms?(blink?'b':'')+'n'+leg:(blink?'b':'')+cast+leg],sc=57.5/sp.h,w=sp.w*sc,h=sp.h*sc,hd=HAND[id]||[14.5,16.5];
+  const punching=(id==='yuji'||id==='sukuna')&&P.punch>0,blink=id==='gojo'&&!cast&&(S.time%3.6)<.14,dsh=DIR_SHEETS[id],useArms=!dsh&&!!(ARMS[id]&&!punching&&(id==='yuta'||(!cast&&!(P.ham>0)))&&SPR.chars[id]['n'+leg]),sp=SPR.chars[id][punching?'p'+leg:useArms?(blink?'b':'')+'n'+leg:(blink?'b':'')+cast+leg],sc=57.5/sp.h,w=sp.w*sc,h=sp.h*sc,hd=HAND[id]||[14.5,16.5];
   let bob=P.mv?-Math.abs(Math.sin(S.time*18))*2.2:Math.sin(S.time*3)*.9,flip=Math.cos(P.face)<-.1,feet=P.y+h/2-2,lx=0;
   if(punching){const k=1-P.punch/.2,lunge=Math.sin(Math.min(1,k)*Math.PI)*8;flip=Math.cos(P.pang)<0;lx=Math.cos(P.pang)*lunge;bob+=Math.sin(P.pang)*lunge*.5}
   ctx.fillStyle='rgba(10,8,20,.4)';ctx.beginPath();ctx.ellipse(P.x,feet,13,5,0,0,TAU);ctx.fill();
@@ -1457,9 +1470,12 @@ function drawPlayer(){
     armFn=(c,w2,h2)=>{const arm=(sx0,sy0,a,len)=>{const pts=[];for(let t=0;t<=len;t+=.5)pts.push([Math.round(sx0+Math.cos(a)*t),Math.round(sy0+Math.sin(a)*t)]);const e=pts[pts.length-1];const Rr=(X,Y,col)=>{c.fillStyle=col;c.fillRect(-w2/2+X*sc,-h2+Y*sc,sc+.6,sc+.6)};
       for(const [X,Y] of pts){Rr(X-1,Y,'#0e0e10');Rr(X+1,Y,'#0e0e10');Rr(X,Y-1,'#0e0e10');Rr(X,Y+1,'#0e0e10')}for(const [X,Y] of pts)Rr(X,Y,A.sleeve);Rr(e[0],e[1],A.skin)};
       arm(A.L[0],A.L[1],ba,bl);arm(A.R[0],A.R[1],fa,fl)}}
+  if(flip!==P.lastFlip){P.turnT=.12;P.lastFlip=flip}P.turnT=Math.max(0,(P.turnT||0)-1/60);
   const hx2=P.hurt>0?(Math.random()<.5?-2:2):0;{const atk=Math.max(P.cast>0?P.cast/.25:0,P.slash>0?P.slash/(P.slashT||.2):0,P.punch>0?P.punch/.2:0,P.ham>0?P.ham/.3:0),ph=atk>0?1-Math.min(1,atk):0,ak=atk>0?(ph<.25?-ph/.25*.7:Math.sin(Math.min(1,(ph-.25)/.75)*Math.PI)):0,
     br=P.mv?Math.sin(S.time*18)*.05:Math.sin(S.time*3)*.025,hs=P.hurt>0?.12:0,sy=1+br-ak*.06-hs,sx=1-br*.8+ak*.08+hs,sk=(P.mv?-.13*Math.cos(P.face):0)+(ak?-.12*(flip?-1:1)*ak:0);
-    if(P.hurt>0||!(P.inv>0&&Math.floor(P.inv*20)%2===0&&!S.won&&!(S.inf&&S.inf.a>0)))drawSprT(sp,P.x+lx+hx2,P.y+bob+h/2,sc,flip,P.hurt>0,sx,sy,sk,armFn)}
+    const tk=P.turnT>0?Math.max(.15,Math.abs(1-2*(1-P.turnT/.12))):1;let dsp=sp,dfl=flip,dsc=sc;
+    if(dsh){const map=[2,1,0,7,6,5,4,3],row=map[dir8(P.face)],fr2=dsh.fr[row];dsp=fr2[P.mv?Math.floor(S.time*9)%fr2.length:0];dfl=false;dsc=57.5/dsp.h}
+    if(P.hurt>0||!(P.inv>0&&Math.floor(P.inv*20)%2===0&&!S.won&&!(S.inf&&S.inf.a>0)))drawSprT(dsp,P.x+lx+hx2,P.y+bob+h/2,dsc,dfl,P.hurt>0,sx*(dsh?1:tk),sy,sk,dsh?null:armFn)}
   if(punching){const fx=P.x+lx+(flip?-1:1)*(17.5*sc-w/2),fy=P.y+bob-h/2+20.5*sc,dir=flip?-1:1,a=P.punch/.2;ctx.globalAlpha=a;ctx.strokeStyle='#fff';ctx.lineWidth=2;for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(fx-dir*(8+i*2),fy-6+i*6);ctx.lineTo(fx-dir*(24+i*6),fy-6+i*6);ctx.stroke()}
     ctx.fillStyle='#ffe9a8';ctx.beginPath();for(let i=0;i<8;i++){const an=i/8*TAU,rr=i%2?5:12;ctx.lineTo(fx+dir*10+Math.cos(an)*rr*(1.3-a*.3),fy+Math.sin(an)*rr*(1.3-a*.3))}ctx.closePath();ctx.fill();ctx.globalAlpha=1}
   if(id==='yuta'){const hl=handL||hd,hx=P.x+lx+(flip?-1:1)*(hl[0]*sc+sc/2-w/2),hy=P.y+bob-h/2+hl[1]*sc+sc/2,tr=[],ang=yAng,a0=yA0,sk=ySk;if(a0!==null)tr.push(a0);
