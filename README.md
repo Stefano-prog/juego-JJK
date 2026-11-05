@@ -10,7 +10,7 @@ Abre `index.html` en el navegador, o activa GitHub Pages en este repositorio (Se
 |---|---|
 | Moverse | WASD / flechas (en el móvil, arrastrar el dedo) |
 | Cambiar de técnica | 1 · 2 · 3 |
-| Potenciadores (10 s, recarga 5 s) | Q velocidad · E daño · R ataque |
+| Potenciadores (10 s, recarga 20 s) | Q velocidad · E daño · R ataque |
 | Técnica máxima | Espacio |
 | Infinito de Gojo (tras cada jefe) | F |
 | Pausa | P |
